@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>母親節 AR 卡片 - 優化版</title>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            font-family: Arial, sans-serif;
+        }
+        #loading.hidden {
+            display: none;
+        }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #ff69b4;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #loadingProgress {
+            width: 80%;
+            max-width: 300px;
+            height: 6px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        #loadingBar {
+            height: 100%;
+            background: #ff69b4;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        #loadingText {
+            margin-top: 10px;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        #instructions {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,105,180,0.95);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-family: Arial, sans-serif;
+            z-index: 999;
+            text-align: center;
+            max-width: 85%;
+            font-size: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        #tip {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+            z-index: 998;
+            max-width: 85%;
+            text-align: center;
+        }
+        #videoLoading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+            z-index: 997;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div class="loader"></div>
+        <p style="font-size: 18px; margin: 10px 0;">載入 AR 體驗中...</p>
+        <div id="loadingProgress">
+            <div id="loadingBar"></div>
+        </div>
+        <p id="loadingText">正在準備相機...</p>
+    </div>
+
+    <div id="videoLoading">
+        <div class="loader" style="width: 40px; height: 40px;"></div>
+        <p style="margin-top: 10px;">載入影片中...</p>
+    </div>
+
+    <div id="instructions">
+        📷 將相機對準卡片圖片
+    </div>
+
+    <div id="tip">
+        💡 提示：保持手機穩定，距離 20-40 公分
+    </div>
+
+    <a-scene 
+        mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiError: no; uiScanning: no; filterMinCF: 0.0001; filterBeta: 0.001;"
+        color-space="sRGB" 
+        renderer="colorManagement: true, physicallyCorrectLights; antialias: true; precision: medium;" 
+        vr-mode-ui="enabled: false" 
+        device-orientation-permission-ui="enabled: false">
+        
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+        <!-- AR 內容 -->
+        <a-entity mindar-image-target="targetIndex: 0">
+            
+            <!-- 影片播放器 -->
+            <a-video 
+                id="arVideo"
+                src="#video" 
+                position="0 0 0" 
+                rotation="0 0 0"
+                width="1.6" 
+                height="0.9"
+                class="clickable"
+                opacity="0"
+                animation__fadein="property: opacity; from: 0; to: 1; dur: 500; startEvents: videoready">
+            </a-video>
+
+            <!-- 載入指示器（影片載入時顯示） -->
+            <a-text 
+                id="videoLoadingText"
+                value="載入中..." 
+                position="0 0 0.1" 
+                align="center" 
+                color="#FFFFFF"
+                width="1.5"
+                opacity="1">
+            </a-text>
+
+            <!-- 播放提示 -->
+            <a-text 
+                id="playHint"
+                value="▶ 點擊播放" 
+                position="0 -0.55 0" 
+                align="center" 
+                color="#FF69B4"
+                width="1.8"
+                visible="false"
+                animation="property: scale; to: 1.1 1.1 1.1; dur: 1000; easing: easeInOutQuad; loop: true; dir: alternate">
+            </a-text>
+
+            <!-- 裝飾愛心 -->
+            <a-sphere 
+                position="-0.9 0.55 0" 
+                radius="0.08" 
+                color="#FF1493"
+                animation="property: position; to: -0.9 0.7 0; dur: 1500; easing: easeInOutQuad; loop: true; dir: alternate">
+            </a-sphere>
+            <a-sphere 
+                position="0.9 0.55 0" 
+                radius="0.08" 
+                color="#FF69B4"
+                animation="property: position; to: 0.9 0.7 0; dur: 1500; easing: easeInOutQuad; loop: true; dir: alternate; delay: 750">
+            </a-sphere>
+
+        </a-entity>
+
+        <!-- 影片素材 - 加強預載入 -->
+        <a-assets timeout="30000">
+            <video 
+                id="video" 
+                src="./video.mp4"
+                preload="auto"
+                crossorigin="anonymous"
+                playsinline
+                webkit-playsinline>
+            </video>
+        </a-assets>
+    </a-scene>
+
+    <script>
+        let videoLoaded = false;
+        let videoElement = document.getElementById('video');
+        let arVideoElement = document.querySelector('#arVideo');
+        let loadingEl = document.getElementById('loading');
+        let loadingBar = document.getElementById('loadingBar');
+        let loadingText = document.getElementById('loadingText');
+        let videoLoadingText = document.querySelector('#videoLoadingText');
+        let playHint = document.querySelector('#playHint');
+        let tipEl = document.getElementById('tip');
+
+        // 載入進度模擬
+        let progress = 0;
+        const loadingInterval = setInterval(() => {
+            if (progress < 70) {
+                progress += Math.random() * 10;
+                loadingBar.style.width = progress + '%';
+            }
+        }, 300);
+
+        // 更新載入文字
+        function updateLoadingText(text) {
+            loadingText.textContent = text;
+            console.log(text);
+        }
+
+        updateLoadingText('正在載入 AR 引擎...');
+
+        // 預載影片
+        videoElement.addEventListener('loadedmetadata', function() {
+            console.log('影片 metadata 已載入');
+            updateLoadingText('影片準備中...');
+        });
+
+        videoElement.addEventListener('loadeddata', function() {
+            console.log('影片數據已載入');
+            videoLoaded = true;
+            videoLoadingText.setAttribute('visible', 'false');
+        });
+
+        videoElement.addEventListener('canplay', function() {
+            console.log('影片可以播放');
+            videoLoaded = true;
+        });
+
+        videoElement.addEventListener('error', function(e) {
+            console.error('影片載入錯誤:', e);
+            alert('影片載入失敗，請確認 video.mp4 存在且格式正確');
+        });
+
+        // A-Frame 場景事件
+        const sceneEl = document.querySelector('a-scene');
+        
+        sceneEl.addEventListener('loaded', function () {
+            console.log('A-Frame 場景已載入');
+            updateLoadingText('初始化相機...');
+            progress = 80;
+            loadingBar.style.width = progress + '%';
+        });
+
+        // AR Ready
+        sceneEl.addEventListener('arReady', () => {
+            console.log('AR 系統就緒');
+            clearInterval(loadingInterval);
+            progress = 100;
+            loadingBar.style.width = '100%';
+            
+            setTimeout(() => {
+                loadingEl.classList.add('hidden');
+            }, 500);
+        });
+
+        // AR Error
+        sceneEl.addEventListener('arError', (event) => {
+            console.error('AR 錯誤:', event.detail.error);
+            alert('AR 初始化失敗：' + event.detail.error);
+        });
+
+        // 標記辨識事件
+        const target = document.querySelector('[mindar-image-target]');
+        let isPlaying = false;
+        
+        target.addEventListener('targetFound', event => {
+            console.log('✓ 找到標記圖片！');
+            tipEl.textContent = '✓ 辨識成功！';
+            
+            // 隱藏載入文字
+            videoLoadingText.setAttribute('visible', 'false');
+            
+            if (videoLoaded) {
+                // 影片已載入，嘗試自動播放
+                setTimeout(() => {
+                    playVideo();
+                }, 300);
+            } else {
+                // 影片還在載入
+                videoLoadingText.setAttribute('visible', 'true');
+                videoLoadingText.setAttribute('value', '影片載入中...');
+            }
+        });
+
+        target.addEventListener('targetLost', event => {
+            console.log('失去標記圖片');
+            tipEl.textContent = '💡 提示：保持手機穩定，距離 20-40 公分';
+            pauseVideo();
+        });
+
+        // 播放影片函數
+        function playVideo() {
+            if (!videoLoaded) {
+                console.log('影片尚未載入完成');
+                return;
+            }
+
+            const video = document.getElementById('video');
+            
+            // 重置影片到開頭（如果需要）
+            if (video.currentTime > 0 && video.ended) {
+                video.currentTime = 0;
+            }
+
+            // 嘗試播放
+            video.play().then(() => {
+                console.log('影片開始播放');
+                isPlaying = true;
+                playHint.setAttribute('visible', 'false');
+                
+                // 確保影片可見
+                arVideoElement.setAttribute('opacity', '1');
+            }).catch(err => {
+                console.error('播放失敗:', err);
+                // 如果自動播放失敗，顯示點擊提示
+                playHint.setAttribute('visible', 'true');
+                playHint.setAttribute('value', '▶ 點擊播放');
+            });
+        }
+
+        // 暫停影片函數
+        function pauseVideo() {
+            const video = document.getElementById('video');
+            video.pause();
+            isPlaying = false;
+            console.log('影片已暫停');
+        }
+
+        // 點擊切換播放/暫停
+        arVideoElement.addEventListener('click', function() {
+            const video = document.getElementById('video');
+            
+            if (!videoLoaded) {
+                alert('影片還在載入中，請稍候...');
+                return;
+            }
+            
+            if (video.paused) {
+                playVideo();
+            } else {
+                pauseVideo();
+                playHint.setAttribute('visible', 'true');
+                playHint.setAttribute('value', '▶ 點擊繼續');
+            }
+        });
+
+        // 監控影片播放狀態
+        videoElement.addEventListener('playing', function() {
+            console.log('影片正在播放');
+            arVideoElement.setAttribute('opacity', '1');
+        });
+
+        videoElement.addEventListener('waiting', function() {
+            console.log('影片緩衝中...');
+        });
+
+        videoElement.addEventListener('ended', function() {
+            console.log('影片播放完畢');
+            playHint.setAttribute('visible', 'true');
+            playHint.setAttribute('value', '🔄 點擊重播');
+        });
+
+        // 錯誤處理
+        window.addEventListener('error', function(e) {
+            console.error('全域錯誤:', e.message);
+        });
+
+        // 檢查 targets.mind
+        fetch('./targets.mind')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('找不到 targets.mind 檔案');
+                }
+                console.log('✓ targets.mind 檔案存在');
+                updateLoadingText('載入 AR 標記...');
+            })
+            .catch(err => {
+                console.error(err.message);
+                alert('找不到 targets.mind 檔案！\n\n請確認：\n1. 已生成 targets.mind\n2. 檔案已上傳到 GitHub');
+            });
+    </script>
+</body>
+</html>
